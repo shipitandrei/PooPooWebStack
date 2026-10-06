@@ -2,6 +2,7 @@
 
 #include <SDL2/SDL.h>
 
+#include <time.h>
 #include <vector>
 
 enum class GameState { Menu, Playing };
