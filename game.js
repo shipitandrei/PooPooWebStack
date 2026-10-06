@@ -7,6 +7,9 @@
   var keys = {};
   var lastTime = 0;
   var bestScore = 0;
+  var debugMode = false;
+  var debugTapCount = 0;
+  var debugTapStartedAt = 0;
   var toiletSprite = loadSprite("assets/toilet.png");
   var pooSprite = loadSprite("assets/poo.png");
   try { bestScore = Number(window.localStorage.getItem("poopoo-best") || 0) || 0; } catch (ignore) {}
@@ -50,7 +53,7 @@
   }
 
   function fitsTargetViewport() {
-    return window.innerWidth >= W && window.innerHeight >= H;
+    return debugMode || (window.innerWidth >= W && window.innerHeight >= H);
   }
 
   function resizeStage() {
@@ -208,7 +211,27 @@
   });
   window.addEventListener("blur", function () { keys = {}; });
 
+  function registerDebugTap() {
+    if (debugMode) return false;
+    var now = Date.now();
+    if (!debugTapStartedAt || now - debugTapStartedAt > 2000) {
+      debugTapCount = 0;
+      debugTapStartedAt = now;
+    }
+    debugTapCount++;
+    if (debugTapCount < 5) return false;
+    debugTapCount = 0;
+    debugTapStartedAt = 0;
+    debugMode = true;
+    if (game.mode === "gate") {
+      game.resumeModeAfterGate = "menu";
+      resizeStage();
+    }
+    return true;
+  }
+
   canvas.addEventListener("click", function (event) {
+    if (registerDebugTap()) return;
     if (game.mode === "gate") {
       startMusic();
       requestFullscreen();
