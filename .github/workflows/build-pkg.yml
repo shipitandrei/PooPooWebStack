@@ -23,7 +23,7 @@ jobs:
           docker run --rm --user root \
             -w /workspace \
             -v "${GITHUB_WORKSPACE}:/workspace" \
-            openorbisofficial/toolchain:v0.5.1 \
+            openorbisofficial/toolchain:v0.5.4 \
             bash -lc 'export OO_PS4_TOOLCHAIN=/lib/OpenOrbisSDK; make package'
 
       - name: Upload installable PS4 package
