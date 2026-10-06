@@ -125,7 +125,7 @@
   }
 
   function drawToilet(x) {
-    drawSprite(toiletSprite, x - 140, H - 240, 280, 230, "TOILET");
+    drawSprite(toiletSprite, x - 140, H - 280, 280, 230, "TOILET");
   }
 
   function drawGate() {
