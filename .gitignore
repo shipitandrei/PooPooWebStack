@@ -2,6 +2,4 @@ build/
 pkg/eboot.bin
 pkg/pkg.gp4
 pkg/sce_sys/param.sfo
-pkg/sce_sys/icon0.png
-pkg/sce_sys/about/right.sprx
 *.pkg

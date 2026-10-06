@@ -24,7 +24,7 @@ jobs:
             -w /workspace \
             -v "${GITHUB_WORKSPACE}:/workspace" \
             openorbisofficial/toolchain:v0.5.1 \
-            make package
+            bash -lc 'export OO_PS4_TOOLCHAIN=/lib/OpenOrbisSDK; make package'
 
       - name: Upload installable PS4 package
         uses: actions/upload-artifact@v4
