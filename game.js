@@ -147,7 +147,7 @@
     ctx.textAlign = "center";
     ctx.fillStyle = "rgba(243,237,223,0.62)";
     ctx.font = "500 18px Arial, Helvetica, sans-serif";
-    ctx.fillText("X / LEFT CLICK TO ENTER FULLSCREEN", W / 2, H / 2 + 70);
+    ctx.fillText("Made by kuayne", W / 2, H / 2 + 70);
   }
 
   function drawMenu() {
@@ -302,14 +302,14 @@
     ctx.fillText("POO POO ON THE TOILET", W / 2, 415);
     ctx.fillStyle = "#f6f1e4";
     ctx.font = "900 55px Arial, Helvetica, sans-serif";
-    ctx.fillText("GAME OVER", W / 2, 492);
+    ctx.fillText("you got bing", W / 2, 492);
     ctx.fillStyle = "#c8d1c9";
     ctx.font = "500 25px Arial, Helvetica, sans-serif";
     ctx.fillText("Score: " + game.score + "     Best: " + bestScore, W / 2, 565);
     roundedRect(760, 615, 400, 70, 12, "#e3bc68", "#f8e2a9", 3);
     ctx.fillStyle = "#17242a";
     ctx.font = "700 23px Arial, Helvetica, sans-serif";
-    ctx.fillText("X / LEFT CLICK TO PLAY AGAIN", W / 2, 650);
+    ctx.fillText("x to play again", W / 2, 650);
   }
 
   function draw() {
