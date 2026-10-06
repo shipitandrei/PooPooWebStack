@@ -165,7 +165,7 @@
     roundedRect(playButton.x, playButton.y, playButton.w, playButton.h, 22, "#e4bd68", "#fff0c7", 4);
     ctx.fillStyle = "#17242a";
     ctx.font = "800 46px Arial, Helvetica, sans-serif";
-    ctx.fillText("PLAY", W / 2, playButton.y + playButton.h / 2);
+    ctx.fillText("play", W / 2, playButton.y + playButton.h / 2);
   }
 
   function startGame() {
@@ -263,7 +263,7 @@
     game.spawnIn -= dt;
     if (game.spawnIn <= 0) {
       var speed = 260 + Math.min(250, game.score * 8);
-      var size = 62 + Math.random() * 18;
+      var size = 110 + Math.random() * 30;
       game.poos.push({ x: 100 + Math.random() * (W - 200), y: -55, size: size, speed: speed + Math.random() * 100 });
       game.spawnIn = Math.max(0.32, 0.88 - game.score * 0.014) + Math.random() * 0.28;
     }
@@ -310,7 +310,7 @@
       ctx.fillStyle = "#fff1c6";
       ctx.font = "800 38px Arial, Helvetica, sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText("CAUGHT! +1", W / 2, 255);
+      ctx.fillText("yeahhh", W / 2, 255);
     }
   }
 
@@ -322,7 +322,7 @@
     ctx.textBaseline = "middle";
     ctx.fillStyle = "#e5bd68";
     ctx.font = "700 22px Arial, Helvetica, sans-serif";
-    ctx.fillText("POO POO ON THE TOILET", W / 2, 415);
+    ctx.fillText("good job binger", W / 2, 415);
     ctx.fillStyle = "#f6f1e4";
     ctx.font = "900 55px Arial, Helvetica, sans-serif";
     ctx.fillText("you got bing", W / 2, 492);
@@ -332,7 +332,7 @@
     roundedRect(760, 615, 400, 70, 12, "#e3bc68", "#f8e2a9", 3);
     ctx.fillStyle = "#17242a";
     ctx.font = "700 23px Arial, Helvetica, sans-serif";
-    ctx.fillText("x to play again", W / 2, 650);
+    ctx.fillText("play again", W / 2, 650);
   }
 
   function draw() {
