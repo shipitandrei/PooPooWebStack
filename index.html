@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>PS4 Fullscreen Test</title>
+
+<style>
+    html, body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: black;
+        color: white;
+        font-family: Arial, sans-serif;
+    }
+
+    #screen {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+    }
+
+    #prompt {
+        font-size: 64px;
+        font-weight: bold;
+    }
+
+    #info {
+        margin-top: 30px;
+        font-size: 28px;
+        color: #aaa;
+    }
+
+    #game {
+        display: none;
+        width: 100%;
+        height: 100%;
+    }
+</style>
+</head>
+
+<body>
+
+<div id="screen">
+    <div id="prompt">PRESS □</div>
+    <div id="info"></div>
+</div>
+
+<div id="game">
+    <!-- Actual game will eventually go here -->
+</div>
+
+<script>
+let started = false;
+
+function checkFullscreen() {
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+
+    document.getElementById("info").textContent =
+        width + " × " + height;
+
+    /*
+     * Sony documents PS4 browser fullscreen as
+     * 1920 × 1080, compared with 1540 × 754 normally.
+     */
+    if (!started && width >= 1700 && height >= 900) {
+        started = true;
+
+        document.getElementById("screen").style.display = "none";
+        document.getElementById("game").style.display = "block";
+
+        startGame();
+    }
+}
+
+function startGame() {
+    document.getElementById("game").innerHTML =
+        '<div style="' +
+        'width:100%;height:100%;' +
+        'display:flex;align-items:center;justify-content:center;' +
+        'font-size:80px;font-weight:bold;' +
+        '">GAME STARTED</div>';
+}
+
+window.addEventListener("resize", checkFullscreen);
+
+checkFullscreen();
+</script>
+
+</body>
+</html>
