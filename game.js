@@ -270,7 +270,7 @@
     for (var i = game.poos.length - 1; i >= 0; i--) {
       var poo = game.poos[i];
       poo.y += poo.speed * dt;
-      if (poo.y + poo.size / 2 >= H - 245 && poo.y < H - 95 && Math.abs(poo.x - game.playerX) < 145) {
+      if (poo.y + poo.size / 2 >= H - 125 && poo.y < H - 95 && Math.abs(poo.x - game.playerX) < 145) {
         game.poos.splice(i, 1);
         game.score++;
         game.flash = 0.15;
