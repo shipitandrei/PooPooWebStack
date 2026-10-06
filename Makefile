@@ -58,6 +58,7 @@ $(PKG_DIR)/sce_sys/param.sfo: Makefile | check-toolchain
 	$(TOOLCHAIN)/bin/$(PLATFORM_DIR)/PkgTool.Core sfo_setentry $@ VERSION --type Utf8 --maxsize 8 --value '$(VERSION)'
 
 $(PKG_DIR)/eboot.bin: $(OBJECTS) | check-toolchain
+	@mkdir -p $(PKG_DIR)
 	$(LD) $(OBJECTS) -o $(BUILD_DIR)/$(TARGET).elf $(LDFLAGS)
 	$(TOOLCHAIN)/bin/$(PLATFORM_DIR)/create-eboot -in=$(BUILD_DIR)/$(TARGET).elf -out=$@ --paid 0x3800000000000011
 
