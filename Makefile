@@ -59,7 +59,7 @@ $(PKG_DIR)/sce_sys/param.sfo: Makefile | check-toolchain
 
 $(PKG_DIR)/eboot.bin: $(OBJECTS) | check-toolchain
 	$(LD) $(OBJECTS) -o $(BUILD_DIR)/$(TARGET).elf $(LDFLAGS)
-	$(TOOLCHAIN)/bin/$(PLATFORM_DIR)/create-eboot -in=$(BUILD_DIR)/$(TARGET).elf -out=$(BUILD_DIR)/$(TARGET).oelf --eboot $@ --paid 0x3800000000000011
+	$(TOOLCHAIN)/bin/$(PLATFORM_DIR)/create-eboot -in=$(BUILD_DIR)/$(TARGET).elf -out=$@ --paid 0x3800000000000011
 
 $(BUILD_DIR)/%.o: src/%.cpp | check-toolchain
 	@mkdir -p $(BUILD_DIR)
