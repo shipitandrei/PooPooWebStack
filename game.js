@@ -32,6 +32,7 @@
     mode: fitsTargetViewport() ? "menu" : "gate",
     resumeModeAfterGate: "menu",
     playerX: W / 2,
+    targetX: W / 2,
     score: 0,
     lives: 3,
     poos: [],
@@ -167,6 +168,7 @@
   function startGame() {
     game.mode = "play";
     game.playerX = W / 2;
+    game.targetX = W / 2;
     game.score = 0;
     game.lives = 3;
     game.poos = [];
@@ -187,7 +189,8 @@
     var rect = canvas.getBoundingClientRect();
     if (!rect.width) return;
     var x = (event.clientX - rect.left) * W / rect.width;
-    game.playerX = Math.max(140, Math.min(W - 140, x));
+    var boostedX = W / 2 + (x - W / 2) * 1.15;
+    game.targetX = Math.max(140, Math.min(W - 140, boostedX));
   }
   canvas.addEventListener("mousemove", moveToPointer);
   canvas.addEventListener("pointermove", moveToPointer);
@@ -224,8 +227,15 @@
   function update(dt) {
     if (game.mode !== "play") return;
     var direction = (keys.ArrowRight ? 1 : 0) - (keys.ArrowLeft ? 1 : 0);
-    game.playerX += direction * 1500 * dt;
+    if (direction) {
+      game.playerX += direction * 1800 * dt;
+      game.targetX = game.playerX;
+    } else {
+      var follow = 1 - Math.exp(-20 * dt);
+      game.playerX += (game.targetX - game.playerX) * follow;
+    }
     game.playerX = Math.max(140, Math.min(W - 140, game.playerX));
+    game.targetX = Math.max(140, Math.min(W - 140, game.targetX));
     game.flash = Math.max(0, game.flash - dt);
     game.spawnIn -= dt;
     if (game.spawnIn <= 0) {
@@ -237,7 +247,7 @@
     for (var i = game.poos.length - 1; i >= 0; i--) {
       var poo = game.poos[i];
       poo.y += poo.speed * dt;
-      if (poo.y + poo.size / 2 >= H - 245 && poo.y < H - 95 && Math.abs(poo.x - game.playerX) < 120) {
+      if (poo.y + poo.size / 2 >= H - 245 && poo.y < H - 95 && Math.abs(poo.x - game.playerX) < 145) {
         game.poos.splice(i, 1);
         game.score++;
         game.flash = 0.15;
