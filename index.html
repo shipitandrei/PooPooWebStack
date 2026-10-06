@@ -1,123 +1,483 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>PS4 Fullscreen Test</title>
-
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#101820">
+<title>Poo Poo on the Toilet</title>
 <style>
-html, body {
-    margin: 0;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    background: black;
-    color: white;
-    font-family: Arial, sans-serif;
-}
-
-#screen {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    text-align: center;
-}
-
-#status {
-    font-size: 48px;
-    font-weight: bold;
-}
-
-#details {
-    margin-top: 25px;
-    font-size: 26px;
-    color: #aaa;
-}
+:root { color-scheme: dark; }
+* { box-sizing: border-box; }
+html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #101820; }
+body { touch-action: none; -webkit-user-select: none; user-select: none; font-family: Arial, Helvetica, sans-serif; }
+#stage { position: absolute; left: 50%; top: 50%; width: 1920px; height: 1080px; transform: translate(-50%, -50%) scale(.5); transform-origin: center center; }
+canvas { display: block; width: 1920px; height: 1080px; background: #101820; outline: none; }
 </style>
 </head>
-
 <body>
-
-<div id="screen">
-    <div id="status">TESTING AUTOMATIC FULLSCREEN...</div>
-    <div id="details"></div>
-</div>
-
+<div id="stage"><canvas id="game" width="1920" height="1080" tabindex="0" aria-label="Poo Poo on the Toilet game"></canvas></div>
 <script>
-var status = document.getElementById("status");
-var details = document.getElementById("details");
+(function () {
+  "use strict";
+  var W = 1920, H = 1080;
+  var canvas = document.getElementById("game");
+  var stage = document.getElementById("stage");
+  var ctx = canvas.getContext("2d");
+  var keys = {};
+  var keyTaps = {};
+  var previousButtons = {};
+  var lastTime = 0;
+  var input = { left: false, right: false, up: false, down: false, confirm: false, cancel: false, square: false, options: false };
+  var bestScore = 0;
+  try { bestScore = Number(window.localStorage.getItem("poopoo-best") || 0) || 0; } catch (ignore) {}
 
-function updateInfo() {
-    details.innerHTML =
-        "Viewport: " +
-        window.innerWidth + " × " +
-        window.innerHeight +
-        "<br><br>" +
-        "Fullscreen API: " +
-        (document.documentElement.requestFullscreen ||
-         document.documentElement.webkitRequestFullscreen
-            ? "AVAILABLE"
-            : "NOT AVAILABLE");
-}
+  var game = {
+    mode: (window.innerWidth < W || window.innerHeight < H) ? "gate" : "menu",
+    selected: 0,
+    playerX: W / 2,
+    score: 0,
+    lives: 3,
+    poos: [],
+    spawnIn: 0.5,
+    elapsed: 0,
+    flash: 0,
+    gamepadName: "",
+    hitCount: 0
+  };
 
-function tryFullscreen() {
-    var element = document.documentElement;
+  function resizeStage() {
+    var scale = Math.min(window.innerWidth / W, window.innerHeight / H);
+    if (!isFinite(scale) || scale <= 0) scale = 0.5;
+    stage.style.transform = "translate(-50%, -50%) scale(" + scale + ")";
+  }
+  window.addEventListener("resize", resizeStage);
+  resizeStage();
 
+  function requestFullscreenFromInput() {
+    var el = document.documentElement;
     try {
-        if (element.requestFullscreen) {
-            var result = element.requestFullscreen();
+      var result;
+      if (el.requestFullscreen) result = el.requestFullscreen();
+      else if (el.webkitRequestFullscreen) result = el.webkitRequestFullscreen();
+      else if (el.webkitRequestFullScreen) result = el.webkitRequestFullScreen();
+      if (result && result.catch) result.catch(function () {});
+    } catch (ignore) {}
+  }
 
-            if (result && result.catch) {
-                result.catch(function(error) {
-                    status.innerHTML = "AUTOMATIC FULLSCREEN FAILED";
-                    details.innerHTML +=
-                        "<br><br>Error: " + error;
-                });
-            }
+  function enterMenu() {
+    requestFullscreenFromInput();
+    game.mode = "menu";
+    game.selected = 0;
+    canvas.focus();
+  }
 
-        } else if (element.webkitRequestFullscreen) {
-            element.webkitRequestFullscreen();
+  function keyName(event) {
+    return event.key || event.keyCode;
+  }
+  function isConfirmKey(key) {
+    return key === "Enter" || key === " " || key === "Spacebar" || key === "Space" || key === 13 || key === 32;
+  }
+  function isSquareKey(key) {
+    return isConfirmKey(key);
+  }
+  window.addEventListener("keydown", function (event) {
+    var key = keyName(event);
+    if (!keys[key]) keyTaps[key] = true;
+    keys[key] = true;
+    if (key === "ArrowLeft" || key === "ArrowRight" || key === "ArrowUp" || key === "ArrowDown" || isConfirmKey(key)) event.preventDefault();
+    if (game.mode === "gate" && isSquareKey(key)) enterMenu();
+  });
+  window.addEventListener("keyup", function (event) { keys[keyName(event)] = false; });
+  window.addEventListener("blur", function () { keys = {}; keyTaps = {}; });
 
-        } else {
-            status.innerHTML = "FULLSCREEN API NOT AVAILABLE";
+  function buttonDown(button) {
+    return !!button && (button.pressed || button.value > 0.5);
+  }
+  function readControllers() {
+    var result = { left: !!(keys.ArrowLeft || keys.a || keys.A), right: !!(keys.ArrowRight || keys.d || keys.D), up: !!keys.ArrowUp, down: !!keys.ArrowDown, confirm: false, cancel: false, square: false, options: false };
+    var pads = null;
+    try {
+      if (navigator.getGamepads) pads = navigator.getGamepads();
+      else if (navigator.webkitGetGamepads) pads = navigator.webkitGetGamepads();
+    } catch (ignore) {}
+    if (pads) {
+      for (var p = 0; p < pads.length; p++) {
+        var pad = pads[p];
+        if (!pad) continue;
+        game.gamepadName = pad.id || "DualShock controller";
+        var now = [];
+        for (var b = 0; b < 16; b++) now[b] = buttonDown(pad.buttons && pad.buttons[b]);
+        var old = previousButtons[pad.index] || [];
+        function tapped(index) { return !!now[index] && !old[index]; }
+        if (now[14] || (pad.axes && pad.axes[0] < -0.28)) result.left = true;
+        if (now[15] || (pad.axes && pad.axes[0] > 0.28)) result.right = true;
+        if (now[12] || (pad.axes && pad.axes[1] < -0.45)) result.up = true;
+        if (now[13] || (pad.axes && pad.axes[1] > 0.45)) result.down = true;
+        if (tapped(0)) result.confirm = true;
+        if (tapped(1)) result.cancel = true;
+        if (tapped(2)) result.square = true;
+        if (tapped(9)) result.options = true;
+        previousButtons[pad.index] = now;
+      }
+    }
+    if (keyTaps.Enter || keyTaps[" "] || keyTaps.Spacebar || keyTaps.Space || keyTaps[13] || keyTaps[32]) result.confirm = true;
+    if (keyTaps.Escape || keyTaps.Backspace || keyTaps[27]) result.cancel = true;
+    if (keyTaps.ArrowUp || keyTaps.w || keyTaps.W) result.up = true;
+    if (keyTaps.ArrowDown || keyTaps.s || keyTaps.S) result.down = true;
+    if (keyTaps.Escape || keyTaps[27]) result.options = true;
+    keyTaps = {};
+    return result;
+  }
+
+  function roundedRect(x, y, w, h, r, fill, stroke, lineWidth) {
+    r = Math.min(r, w / 2, h / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+    if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+    if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lineWidth || 2; ctx.stroke(); }
+  }
+
+  function drawBackground() {
+    var wall = ctx.createLinearGradient(0, 0, 0, 835);
+    wall.addColorStop(0, "#243d48");
+    wall.addColorStop(1, "#182a35");
+    ctx.fillStyle = wall;
+    ctx.fillRect(0, 0, W, 835);
+    ctx.strokeStyle = "rgba(223,239,224,0.075)";
+    ctx.lineWidth = 3;
+    for (var x = 0; x <= W; x += 120) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 835); ctx.stroke();
+    }
+    for (var y = 0; y <= 840; y += 96) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+    }
+    ctx.fillStyle = "#d2a85a";
+    ctx.fillRect(0, 830, W, 12);
+    var floor = ctx.createLinearGradient(0, 842, 0, H);
+    floor.addColorStop(0, "#d7c8aa");
+    floor.addColorStop(1, "#a99a7d");
+    ctx.fillStyle = floor;
+    ctx.fillRect(0, 842, W, H - 842);
+    ctx.strokeStyle = "rgba(74,65,52,0.16)";
+    ctx.lineWidth = 3;
+    for (var fx = 0; fx <= W; fx += 160) {
+      ctx.beginPath(); ctx.moveTo(fx, 842); ctx.lineTo(fx, H); ctx.stroke();
+    }
+    for (var fy = 925; fy < H; fy += 88) {
+      ctx.beginPath(); ctx.moveTo(0, fy); ctx.lineTo(W, fy); ctx.stroke();
+    }
+    ctx.fillStyle = "rgba(11,20,26,0.12)";
+    ctx.fillRect(0, 842, W, 6);
+  }
+
+  function drawPoo(x, y, size, rotation) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rotation || 0);
+    var unit = size / 5;
+    ctx.fillStyle = "#81502f";
+    ctx.fillRect(-unit * 2.5, -unit * 0.5, unit * 5, unit * 3.5);
+    ctx.fillRect(-unit * 2, -unit * 1.5, unit * 4, unit * 1.5);
+    ctx.fillRect(-unit * 1.4, -unit * 2.3, unit * 2.8, unit * 1.2);
+    ctx.fillRect(-unit * 0.7, -unit * 3, unit * 1.4, unit * 1.1);
+    ctx.fillStyle = "#a87342";
+    ctx.fillRect(-unit * 1.8, -unit * 1.25, unit * 1.4, unit * 0.65);
+    ctx.fillRect(-unit * 1.05, -unit * 2.15, unit * 0.9, unit * 0.5);
+    ctx.fillStyle = "#211b18";
+    ctx.fillRect(-unit * 1.15, unit * 0.55, unit * 0.35, unit * 0.45);
+    ctx.fillRect(unit * 0.55, unit * 0.55, unit * 0.35, unit * 0.45);
+    ctx.restore();
+  }
+
+  function drawToilet(x, y) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.fillStyle = "rgba(20,26,26,0.20)";
+    ctx.beginPath(); ctx.ellipse(0, 38, 118, 22, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#eee8d8";
+    roundedRect(54, -135, 70, 125, 16, "#f2ecde", "#9eaa9e", 5);
+    roundedRect(68, -119, 42, 12, 5, "#c5cec1", null, 0);
+    ctx.fillStyle = "#fffdf4";
+    ctx.strokeStyle = "#9ca89c";
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.moveTo(-88, -46);
+    ctx.bezierCurveTo(-77, -82, 67, -84, 82, -44);
+    ctx.bezierCurveTo(85, -6, 57, 28, 20, 34);
+    ctx.lineTo(-37, 34);
+    ctx.bezierCurveTo(-76, 26, -100, -6, -88, -46);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = "#d9e8de";
+    ctx.beginPath(); ctx.ellipse(-2, -43, 62, 18, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = "#fdf8eb"; ctx.lineWidth = 8;
+    ctx.beginPath(); ctx.ellipse(-2, -43, 74, 24, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = "#faf5e7";
+    ctx.beginPath(); ctx.moveTo(-41, 26); ctx.lineTo(35, 26); ctx.lineTo(24, 70); ctx.lineTo(-30, 70); ctx.closePath(); ctx.fill();
+    ctx.fillRect(-39, 66, 80, 12);
+    ctx.restore();
+  }
+
+  function drawTopLabel(text, x, y, size, color, align) {
+    ctx.font = "700 " + size + "px Arial, Helvetica, sans-serif";
+    ctx.textAlign = align || "left";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = color || "#f6f1e4";
+    ctx.fillText(text, x, y);
+  }
+
+  function drawGate() {
+    ctx.fillStyle = "#101820";
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = "rgba(226,190,108,0.10)";
+    ctx.beginPath(); ctx.arc(W / 2, H / 2, 158, 0, Math.PI * 2); ctx.fill();
+    ctx.font = "600 48px Arial, Helvetica, sans-serif";
+    ctx.textBaseline = "middle";
+    ctx.textAlign = "left";
+    var label = "Press";
+    var labelWidth = ctx.measureText(label).width;
+    var boxSize = 52;
+    var gap = 22;
+    var total = labelWidth + gap + boxSize;
+    var left = (W - total) / 2;
+    ctx.fillStyle = "#f3eddf";
+    ctx.fillText(label, left, H / 2);
+    ctx.strokeStyle = "#e4bd68";
+    ctx.lineWidth = 5;
+    ctx.strokeRect(left + labelWidth + gap, H / 2 - boxSize / 2, boxSize, boxSize);
+  }
+
+  function drawMenuButton(y, label, selected) {
+    var x = 690, width = 540, height = 82;
+    roundedRect(x, y, width, height, 15, selected ? "#e3bc68" : "rgba(238,232,216,0.08)", selected ? "#f8e2a9" : "rgba(238,232,216,0.24)", 3);
+    ctx.font = "700 30px Arial, Helvetica, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = selected ? "#17242a" : "#f2ecde";
+    ctx.fillText(label, x + width / 2, y + height / 2 + 1);
+  }
+
+  function drawMenu() {
+    drawBackground();
+    ctx.fillStyle = "rgba(11,18,24,0.58)";
+    ctx.fillRect(0, 0, W, H);
+    drawPoo(960, 210 + Math.sin(Date.now() / 500) * 9, 92, 0);
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = "#e5bd68";
+    ctx.font = "700 25px Arial, Helvetica, sans-serif";
+    ctx.fillText("A TOILET-TOP ARCADE GAME", W / 2, 307);
+    ctx.fillStyle = "#f6f1e4";
+    ctx.font = "900 72px Arial, Helvetica, sans-serif";
+    ctx.fillText("POO POO ON THE TOILET", W / 2, 385);
+    ctx.fillStyle = "#bac5bc";
+    ctx.font = "400 27px Arial, Helvetica, sans-serif";
+    ctx.fillText("Catch the falling trouble. Keep your bathroom spotless.", W / 2, 440);
+    drawMenuButton(505, "START GAME", game.selected === 0);
+    drawMenuButton(606, "HOW TO PLAY", game.selected === 1);
+    ctx.fillStyle = "#d8cda9";
+    ctx.font = "600 22px Arial, Helvetica, sans-serif";
+    ctx.fillText("BEST SCORE  " + bestScore, W / 2, 743);
+    ctx.fillStyle = "rgba(241,236,222,0.72)";
+    ctx.font = "500 20px Arial, Helvetica, sans-serif";
+    ctx.fillText("D-PAD / LEFT STICK  MOVE     ✕  SELECT     ○  BACK", W / 2, 1000);
+    ctx.fillStyle = game.gamepadName ? "#8bd0a7" : "#c8bfa9";
+    ctx.font = "600 17px Arial, Helvetica, sans-serif";
+    ctx.fillText(game.gamepadName ? "CONTROLLER CONNECTED" : "DUALSHOCK 4 READY", W / 2, 1037);
+  }
+
+  function drawControls() {
+    drawBackground();
+    ctx.fillStyle = "rgba(11,18,24,0.67)";
+    ctx.fillRect(0, 0, W, H);
+    roundedRect(480, 265, 960, 550, 26, "#182a35", "#d7b567", 3);
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillStyle = "#e5bd68"; ctx.font = "700 24px Arial, Helvetica, sans-serif";
+    ctx.fillText("HOW TO PLAY", W / 2, 345);
+    ctx.fillStyle = "#f5f0e4"; ctx.font = "700 43px Arial, Helvetica, sans-serif";
+    ctx.fillText("Catch every falling poo", W / 2, 420);
+    ctx.fillStyle = "#c8d1c9"; ctx.font = "400 26px Arial, Helvetica, sans-serif";
+    ctx.fillText("Move your toilet left and right to catch them.", W / 2, 493);
+    ctx.fillText("Miss three and the bathroom is done for.", W / 2, 540);
+    ctx.fillStyle = "#e4bd68"; ctx.font = "700 22px Arial, Helvetica, sans-serif";
+    ctx.fillText("DUALSHOCK 4", W / 2, 622);
+    ctx.fillStyle = "#e9e3d6"; ctx.font = "500 22px Arial, Helvetica, sans-serif";
+    ctx.fillText("D-PAD or LEFT STICK  —  MOVE", W / 2, 670);
+    ctx.fillText("✕  START / SELECT     ○  BACK     OPTIONS  PAUSE", W / 2, 714);
+    ctx.fillStyle = "#e3bc68"; ctx.font = "600 21px Arial, Helvetica, sans-serif";
+    ctx.fillText("PRESS  ✕  OR  ○  TO RETURN", W / 2, 875);
+  }
+
+  function startGame() {
+    game.mode = "play";
+    game.playerX = W / 2;
+    game.score = 0;
+    game.lives = 3;
+    game.poos = [];
+    game.spawnIn = 0.45;
+    game.elapsed = 0;
+    game.flash = 0;
+    game.hitCount = 0;
+  }
+
+  function saveBest() {
+    if (game.score > bestScore) {
+      bestScore = game.score;
+      try { window.localStorage.setItem("poopoo-best", String(bestScore)); } catch (ignore) {}
+    }
+  }
+
+  function updateMenu(controls) {
+    if (controls.up) game.selected = (game.selected + 1) % 2;
+    if (controls.down) game.selected = (game.selected + 1) % 2;
+    if (controls.confirm) {
+      if (game.selected === 0) startGame();
+      else game.mode = "controls";
+    }
+  }
+
+  function updateGame(controls, dt) {
+    if (game.mode === "paused") {
+      if (controls.confirm) game.mode = "play";
+      if (controls.cancel) game.mode = "menu";
+      return;
+    }
+    if (game.mode === "over") {
+      if (controls.confirm) startGame();
+      if (controls.cancel) game.mode = "menu";
+      return;
+    }
+    if (controls.options || controls.cancel) {
+      game.mode = "paused";
+      return;
+    }
+    var direction = (controls.right ? 1 : 0) - (controls.left ? 1 : 0);
+    game.playerX += direction * 760 * dt;
+    game.playerX = Math.max(105, Math.min(W - 105, game.playerX));
+    game.elapsed += dt;
+    game.flash = Math.max(0, game.flash - dt);
+    game.spawnIn -= dt;
+    if (game.spawnIn <= 0) {
+      var speed = 250 + Math.min(240, game.score * 8);
+      game.poos.push({ x: 100 + Math.random() * (W - 200), y: -65, size: 46 + Math.random() * 16, speed: speed + Math.random() * 100, spin: (Math.random() - 0.5) * 0.7, angle: 0 });
+      game.spawnIn = Math.max(0.32, 0.88 - game.score * 0.014) + Math.random() * 0.28;
+    }
+    for (var i = game.poos.length - 1; i >= 0; i--) {
+      var poo = game.poos[i];
+      poo.y += poo.speed * dt;
+      poo.angle += poo.spin * dt;
+      if (poo.y + poo.size * 0.48 >= 880 && poo.y < 970 && Math.abs(poo.x - game.playerX) < 91) {
+        game.poos.splice(i, 1);
+        game.score++;
+        game.hitCount++;
+        game.flash = 0.16;
+        if (game.score > bestScore) saveBest();
+      } else if (poo.y - poo.size * 0.55 > H) {
+        game.poos.splice(i, 1);
+        game.lives--;
+        if (game.lives <= 0) {
+          saveBest();
+          game.mode = "over";
         }
-
-    } catch (error) {
-        status.innerHTML = "AUTOMATIC FULLSCREEN FAILED";
-        details.innerHTML +=
-            "<br><br>Error: " + error;
+      }
     }
-}
+  }
 
-function checkFullscreen() {
-    updateInfo();
-
-    var width = window.innerWidth;
-    var height = window.innerHeight;
-
-    if (width >= 1700 && height >= 900) {
-        status.innerHTML = "🎉 FULLSCREEN WORKS!";
+  function drawHud() {
+    roundedRect(54, 48, 344, 104, 18, "rgba(15,27,34,0.84)", "rgba(230,211,162,0.32)", 2);
+    drawTopLabel("SCORE", 84, 80, 18, "#d7bd7f", "left");
+    drawTopLabel(String(game.score).padStart ? String(game.score).padStart(4, "0") : ("0000" + game.score).slice(-4), 84, 122, 42, "#f6f1e4", "left");
+    roundedRect(W - 397, 48, 344, 104, 18, "rgba(15,27,34,0.84)", "rgba(230,211,162,0.32)", 2);
+    drawTopLabel("MISSES", W - 365, 80, 18, "#d7bd7f", "left");
+    for (var i = 0; i < 3; i++) {
+      ctx.fillStyle = i < game.lives ? "#e4bd68" : "rgba(228,189,104,0.20)";
+      ctx.beginPath(); ctx.arc(W - 348 + i * 72, 121, 14, 0, Math.PI * 2); ctx.fill();
     }
-}
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillStyle = "rgba(248,241,226,0.75)"; ctx.font = "600 17px Arial, Helvetica, sans-serif";
+    ctx.fillText("OPTIONS / ESC  PAUSE", W / 2, 77);
+    if (game.flash > 0) {
+      ctx.fillStyle = "rgba(235,195,105," + (game.flash * 0.42) + ")";
+      ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = "#fff1c6"; ctx.font = "800 38px Arial, Helvetica, sans-serif";
+      ctx.fillText("SPLASH! +1", W / 2, 255);
+    }
+  }
 
-window.addEventListener("resize", checkFullscreen);
+  function drawPlay() {
+    drawBackground();
+    for (var i = 0; i < game.poos.length; i++) drawPoo(game.poos[i].x, game.poos[i].y, game.poos[i].size, game.poos[i].angle);
+    drawToilet(game.playerX, 958);
+    drawHud();
+  }
 
-updateInfo();
+  function drawOverlay(title, line1, line2) {
+    ctx.fillStyle = "rgba(9,16,21,0.78)";
+    ctx.fillRect(0, 0, W, H);
+    roundedRect(570, 335, 780, 390, 25, "#182a35", "#d7b567", 3);
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillStyle = "#e5bd68"; ctx.font = "700 22px Arial, Helvetica, sans-serif";
+    ctx.fillText("POO POO ON THE TOILET", W / 2, 415);
+    ctx.fillStyle = "#f6f1e4"; ctx.font = "900 55px Arial, Helvetica, sans-serif";
+    ctx.fillText(title, W / 2, 492);
+    ctx.fillStyle = "#c8d1c9"; ctx.font = "500 25px Arial, Helvetica, sans-serif";
+    ctx.fillText(line1, W / 2, 565);
+    ctx.fillStyle = "#e5bd68"; ctx.font = "600 21px Arial, Helvetica, sans-serif";
+    ctx.fillText(line2, W / 2, 640);
+  }
 
-/*
- * Attempt immediately.
- */
-tryFullscreen();
+  function draw() {
+    if (game.mode === "gate") { drawGate(); return; }
+    if (game.mode === "menu") { drawMenu(); return; }
+    if (game.mode === "controls") { drawControls(); return; }
+    drawPlay();
+    if (game.mode === "paused") drawOverlay("PAUSED", "Take a breather. The poo can wait.", "✕  RESUME          ○  MAIN MENU");
+    if (game.mode === "over") drawOverlay("GAME OVER", "Final score: " + game.score + "     Best: " + bestScore, "✕  PLAY AGAIN          ○  MAIN MENU");
+  }
 
-/*
- * Try again after a short delay in case the
- * browser isn't ready immediately.
- */
-setTimeout(tryFullscreen, 1000);
+  function clickAt(event) {
+    var rect = canvas.getBoundingClientRect();
+    var px = (event.clientX - rect.left) * W / rect.width;
+    var py = (event.clientY - rect.top) * H / rect.height;
+    if (game.mode === "gate") { enterMenu(); return; }
+    if (game.mode === "menu") {
+      if (py >= 490 && py <= 595) { game.selected = 0; startGame(); }
+      else if (py >= 595 && py <= 700) { game.selected = 1; game.mode = "controls"; }
+    } else if (game.mode === "controls") game.mode = "menu";
+    else if (game.mode === "paused") game.mode = "play";
+    else if (game.mode === "over") startGame();
+  }
+  canvas.addEventListener("click", clickAt);
 
+  function frame(time) {
+    if (!lastTime) lastTime = time;
+    var dt = Math.min(0.04, Math.max(0, (time - lastTime) / 1000));
+    lastTime = time;
+    input = readControllers();
+    if (game.mode === "gate" && input.square) enterMenu();
+    else if (game.mode === "menu") updateMenu(input);
+    else if (game.mode === "controls") {
+      if (input.confirm || input.cancel) game.mode = "menu";
+    } else updateGame(input, dt);
+    draw();
+    (window.requestAnimationFrame || function (fn) { window.setTimeout(function () { fn(Date.now()); }, 16); })(frame);
+  }
+
+  if (navigator.getGamepads) {
+    window.addEventListener("gamepadconnected", function (event) { game.gamepadName = event.gamepad && event.gamepad.id ? event.gamepad.id : "DualShock controller"; });
+    window.addEventListener("gamepaddisconnected", function () { game.gamepadName = ""; });
+  }
+  canvas.focus();
+  (window.requestAnimationFrame || function (fn) { window.setTimeout(function () { fn(Date.now()); }, 16); })(frame);
+})();
 </script>
-
 </body>
 </html>
