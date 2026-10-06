@@ -41,6 +41,10 @@ package: $(CONTENT_ID).pkg
 $(CONTENT_ID).pkg: $(PKG_DIR)/pkg.gp4
 	$(TOOLCHAIN)/bin/$(PLATFORM_DIR)/PkgTool.Core pkg_build $< .
 
+$(PKG_DIR)/sce_sys/icon0.png: $(ICON)
+	@mkdir -p $(PKG_DIR)/sce_sys
+	cp $(ICON) $@
+
 $(PKG_DIR)/pkg.gp4: $(PKG_DIR)/eboot.bin $(PKG_DIR)/sce_sys/param.sfo $(PKG_DIR)/sce_sys/icon0.png
 	cd $(PKG_DIR) && $(TOOLCHAIN)/bin/$(PLATFORM_DIR)/create-gp4 -out pkg.gp4 --content-id=$(CONTENT_ID) --files "eboot.bin sce_sys/param.sfo sce_sys/icon0.png"
 
