@@ -1,4 +1,4 @@
-name: Build PS4 package
+name: Build Poo Poo PS4 PKG
 
 on:
   push:
@@ -9,31 +9,25 @@ permissions:
   contents: read
 
 jobs:
-  package:
-    name: Build OpenOrbis PKG
+  build:
+    name: Build PS4 PKG
     runs-on: ubuntu-22.04
+
     steps:
-      - name: Check out source
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up OpenOrbis v0.5.4
-        run: |
-          set -euo pipefail
-          toolchain_dir="$RUNNER_TEMP/openorbis"
-          mkdir -p "$toolchain_dir"
-          curl --fail --location --silent --show-error "https://github.com/OpenOrbis/OpenOrbis-PS4-Toolchain/releases/download/v0.5.4/v0.5.4.tar.gz" | tar -xz -C "$toolchain_dir"
-          curl --fail --location --silent --show-error "https://github.com/OpenOrbis/create-gp4/releases/latest/download/binaries.tar.gz" | tar -xz -C "$toolchain_dir"
-          curl --fail --location --silent --show-error "https://github.com/maxton/LibOrbisPkg/releases/download/0.2.231/PkgTool.Core-linux-x64-0.2.231.zip" --output "$RUNNER_TEMP/pkgtool.zip"
-          unzip -qo "$RUNNER_TEMP/pkgtool.zip" -d "$toolchain_dir/bin/linux"
-          chmod +x "$toolchain_dir/bin/linux"/*
-          echo "OO_PS4_TOOLCHAIN=$toolchain_dir" >> "$GITHUB_ENV"
+      - name: Build with OpenOrbis
+        uses: OpenOrbis/toolchain-action@main
+        with:
+          version: v0.5.4
+          command: make package
 
-      - name: Build and package with OpenOrbis
-        run: make package
-
-      - name: Upload installable PS4 package
+      - name: Upload PKG
         uses: actions/upload-artifact@v4
         with:
-          name: poo-poo-on-the-toilet-ps4-pkg
-          path: IV0000-PPOO00001_00-POOPOOTOILET0001.pkg
+          name: PooPooOnTheToilet-PS4
+          path: |
+            *.pkg
+            **/*.pkg
           if-no-files-found: error
