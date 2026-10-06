@@ -18,16 +18,16 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build with OpenOrbis
-        uses: OpenOrbis/toolchain-action@main
-        with:
-          version: v0.5.4
-          command: make package
+        run: |
+          docker run --rm \
+            -w /workspace \
+            -v "$PWD:/workspace" \
+            openorbisofficial/toolchain:v0.5.4 \
+            make package
 
       - name: Upload PKG
         uses: actions/upload-artifact@v4
         with:
           name: PooPooOnTheToilet-PS4
-          path: |
-            *.pkg
-            **/*.pkg
+          path: "*.pkg"
           if-no-files-found: error
