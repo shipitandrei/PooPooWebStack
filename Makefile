@@ -33,7 +33,7 @@ all: package
 
 check-toolchain:
 	@test -n "$(TOOLCHAIN)" || (echo "OO_PS4_TOOLCHAIN is not set"; exit 1)
-	@test -x "$(TOOLCHAIN)/bin/$(PLATFORM_DIR)/create-fself" || (echo "OpenOrbis Linux/macOS tools not found"; exit 1)
+	@test -x "$(TOOLCHAIN)/bin/$(PLATFORM_DIR)/create-eboot" || (echo "OpenOrbis Linux/macOS tools not found"; exit 1)
 
 package: $(CONTENT_ID).pkg
 
@@ -59,7 +59,7 @@ $(PKG_DIR)/sce_sys/param.sfo: Makefile | check-toolchain
 
 $(PKG_DIR)/eboot.bin: $(OBJECTS) | check-toolchain
 	$(LD) $(OBJECTS) -o $(BUILD_DIR)/$(TARGET).elf $(LDFLAGS)
-	$(TOOLCHAIN)/bin/$(PLATFORM_DIR)/create-fself -in=$(BUILD_DIR)/$(TARGET).elf -out=$(BUILD_DIR)/$(TARGET).oelf --eboot $@ --paid 0x3800000000000011
+	$(TOOLCHAIN)/bin/$(PLATFORM_DIR)/create-eboot -in=$(BUILD_DIR)/$(TARGET).elf -out=$(BUILD_DIR)/$(TARGET).oelf --eboot $@ --paid 0x3800000000000011
 
 $(BUILD_DIR)/%.o: src/%.cpp | check-toolchain
 	@mkdir -p $(BUILD_DIR)
