@@ -51,9 +51,10 @@ jobs:
 
           chmod +x "$TOOLCHAIN_ROOT/bin/linux/"*
 
-          test -x "$TOOLCHAIN_ROOT/bin/linux/create-fself"
-          test -x "$TOOLCHAIN_ROOT/bin/linux/create-gp4"
           test -x "$TOOLCHAIN_ROOT/bin/linux/PkgTool.Core"
+          test -f "$TOOLCHAIN_ROOT/src/modules/right.sprx"
+          test -f "$TOOLCHAIN_ROOT/src/modules/libSceFios2.prx"
+          test -f "$TOOLCHAIN_ROOT/src/modules/libc.prx"
 
           echo "TOOLCHAIN_ROOT=$TOOLCHAIN_ROOT" >> "$GITHUB_ENV"
 
@@ -73,34 +74,67 @@ jobs:
           cat openorbis-sdk.log
           exit 1
 
-      - name: Install LLVM 18
+      - name: Compile with LLVM 18
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends \
             clang-18 \
             lld-18
 
-      - name: Compile and package
-        run: |
           export OO_PS4_TOOLCHAIN="$TOOLCHAIN_ROOT"
 
-          if ! make package > poopoobuild.log 2>&1; then
-            cat poopoobuild.log
+          if ! make CC=clang-18 CXX=clang++-18 LD=ld.lld-18 \
+            eboot.bin > poopoobuild-compile.log 2>&1; then
+            cat poopoobuild-compile.log
             exit 1
           fi
 
-          cat poopoobuild.log
+          cat poopoobuild-compile.log
+
+          test -s eboot.bin
+
+      - name: Package PKG with OpenOrbis tools
+        run: |
+          chmod -R a+rwX "$GITHUB_WORKSPACE"
+
+          if ! docker run --rm --user 0:0 \
+            --env OO_PS4_TOOLCHAIN=/opt/openorbis \
+            --volume "$GITHUB_WORKSPACE:/work" \
+            --volume "$TOOLCHAIN_ROOT:/opt/openorbis" \
+            --workdir /work \
+            ubuntu:20.04 \
+            bash -lc '
+              export DEBIAN_FRONTEND=noninteractive
+
+              apt-get update -qq
+
+              apt-get install -y --no-install-recommends \
+                make \
+                libicu66 \
+                libssl1.1 \
+                ca-certificates \
+                python3
+
+              make IV0000-PPOO00001_00-POOPOOTOILET0001.pkg
+            ' > poopoobuild-package.log 2>&1; then
+
+            cat poopoobuild-package.log
+            exit 1
+          fi
+
+          cat poopoobuild-package.log
 
           test -s IV0000-PPOO00001_00-POOPOOTOILET0001.pkg
 
-      - name: Upload build diagnostics
+      - name: Upload diagnostics on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: poopoogame-build-diagnostics
           path: |
             openorbis-sdk.log
-            poopoobuild.log
+            poopoobuild-compile.log
+            poopoobuild-package.log
           if-no-files-found: ignore
 
       - name: Upload PS4 PKG
