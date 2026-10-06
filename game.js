@@ -11,9 +11,26 @@
   var pooSprite = loadSprite("assets/poo.png");
   try { bestScore = Number(window.localStorage.getItem("poopoo-best") || 0) || 0; } catch (ignore) {}
 
+  var playButton = { x: 760, y: 590, w: 400, h: 130 };
+  var backgroundMusic = document.createElement("audio");
+  backgroundMusic.src = "assets/music.mp3";
+  backgroundMusic.loop = true;
+  backgroundMusic.preload = "none";
+  backgroundMusic.volume = 0.4;
+  var musicUnavailable = false;
+  backgroundMusic.addEventListener("error", function () { musicUnavailable = true; });
+
+  function startMusic() {
+    if (musicUnavailable) return;
+    try {
+      var request = backgroundMusic.play();
+      if (request && request.catch) request.catch(function () {});
+    } catch (ignore) {}
+  }
+
   var game = {
-    mode: "gate",
-    resumePlayAfterGate: false,
+    mode: fitsTargetViewport() ? "menu" : "gate",
+    resumeModeAfterGate: "menu",
     playerX: W / 2,
     score: 0,
     lives: 3,
@@ -42,16 +59,15 @@
 
     if (!fitsTargetViewport()) {
       if (game.mode !== "gate") {
-        game.resumePlayAfterGate = game.mode === "play";
+        game.resumeModeAfterGate = game.mode;
         game.mode = "gate";
       }
       return;
     }
 
     if (game.mode === "gate") {
-      if (game.resumePlayAfterGate) game.mode = "play";
-      else startGame();
-      game.resumePlayAfterGate = false;
+      game.mode = game.resumeModeAfterGate || "menu";
+      game.resumeModeAfterGate = "menu";
     }
   }
 
@@ -164,6 +180,22 @@
     ctx.fillText("X / LEFT CLICK TO ENTER FULLSCREEN", W / 2, H / 2 + 70);
   }
 
+  function drawMenu() {
+    drawBackground();
+    ctx.fillStyle = "rgba(8,17,24,0.72)";
+    ctx.fillRect(0, 0, W, H);
+    roundedRect(405, 275, 1110, 500, 32, "rgba(16,24,32,0.94)", "rgba(228,189,104,0.72)", 3);
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = "#f3eddf";
+    ctx.font = "800 76px Arial, Helvetica, sans-serif";
+    ctx.fillText("Poo Poo on the Toilet", W / 2, 425);
+    roundedRect(playButton.x, playButton.y, playButton.w, playButton.h, 22, "#e4bd68", "#fff0c7", 4);
+    ctx.fillStyle = "#17242a";
+    ctx.font = "800 46px Arial, Helvetica, sans-serif";
+    ctx.fillText("PLAY", W / 2, playButton.y + playButton.h / 2);
+  }
+
   function startGame() {
     game.mode = "play";
     game.playerX = W / 2;
@@ -172,7 +204,7 @@
     game.poos = [];
     game.spawnIn = 0.4;
     game.flash = 0;
-    game.resumePlayAfterGate = false;
+    game.resumeModeAfterGate = "menu";
   }
 
   function saveBest() {
@@ -205,9 +237,20 @@
   });
   window.addEventListener("blur", function () { keys = {}; });
 
-  canvas.addEventListener("click", function () {
-    if (game.mode === "gate") requestFullscreen();
-    else if (game.mode === "over") startGame();
+  canvas.addEventListener("click", function (event) {
+    if (game.mode === "gate") {
+      startMusic();
+      requestFullscreen();
+    } else if (game.mode === "menu") {
+      var rect = canvas.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+      var x = (event.clientX - rect.left) * W / rect.width;
+      var y = (event.clientY - rect.top) * H / rect.height;
+      if (x >= playButton.x && x <= playButton.x + playButton.w && y >= playButton.y && y <= playButton.y + playButton.h) {
+        startMusic();
+        startGame();
+      }
+    } else if (game.mode === "over") startGame();
   });
 
   function update(dt) {
@@ -293,6 +336,7 @@
 
   function draw() {
     if (game.mode === "gate") { drawGate(); return; }
+    if (game.mode === "menu") { drawMenu(); return; }
     drawBackground();
     for (var i = 0; i < game.poos.length; i++) drawPoo(game.poos[i].x, game.poos[i].y, game.poos[i].size);
     drawToilet(game.playerX);
