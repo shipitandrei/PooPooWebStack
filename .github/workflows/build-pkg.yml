@@ -52,9 +52,8 @@ jobs:
           chmod +x "$TOOLCHAIN_ROOT/bin/linux/"*
 
           test -x "$TOOLCHAIN_ROOT/bin/linux/PkgTool.Core"
-          test -f "$TOOLCHAIN_ROOT/src/modules/right.sprx"
-          test -f "$TOOLCHAIN_ROOT/src/modules/libSceFios2.prx"
-          test -f "$TOOLCHAIN_ROOT/src/modules/libc.prx"
+          test -x "$TOOLCHAIN_ROOT/bin/linux/create-fself"
+          test -x "$TOOLCHAIN_ROOT/bin/linux/create-gp4"
 
           echo "TOOLCHAIN_ROOT=$TOOLCHAIN_ROOT" >> "$GITHUB_ENV"
 
@@ -83,15 +82,17 @@ jobs:
 
           export OO_PS4_TOOLCHAIN="$TOOLCHAIN_ROOT"
 
-          if ! make CC=clang-18 CXX=clang++-18 LD=ld.lld-18 \
-            eboot.bin > poopoobuild-compile.log 2>&1; then
+          if ! make \
+            CCX=clang++-18 \
+            LD=ld.lld-18 \
+            pkg/eboot.bin > poopoobuild-compile.log 2>&1; then
             cat poopoobuild-compile.log
             exit 1
           fi
 
           cat poopoobuild-compile.log
 
-          test -s eboot.bin
+          test -s pkg/eboot.bin
 
       - name: Package PKG with OpenOrbis tools
         run: |
