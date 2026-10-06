@@ -19,7 +19,7 @@ LDFLAGS := -m elf_x86_64 -pie --script $(TOOLCHAIN)/link.x --eh-frame-hdr -L$(TO
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Linux)
 CCX := clang++
-LD := ld.lld
+LD := ld.lld-18
 PLATFORM_DIR := linux
 endif
 ifeq ($(UNAME_S),Darwin)
