@@ -5,91 +5,118 @@
 <title>PS4 Fullscreen Test</title>
 
 <style>
-    html, body {
-        margin: 0;
-        width: 100%;
-        height: 100%;
-        overflow: hidden;
-        background: black;
-        color: white;
-        font-family: Arial, sans-serif;
-    }
+html, body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: black;
+    color: white;
+    font-family: Arial, sans-serif;
+}
 
-    #screen {
-        width: 100%;
-        height: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-direction: column;
-    }
+#screen {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    text-align: center;
+}
 
-    #prompt {
-        font-size: 64px;
-        font-weight: bold;
-    }
+#status {
+    font-size: 48px;
+    font-weight: bold;
+}
 
-    #info {
-        margin-top: 30px;
-        font-size: 28px;
-        color: #aaa;
-    }
-
-    #game {
-        display: none;
-        width: 100%;
-        height: 100%;
-    }
+#details {
+    margin-top: 25px;
+    font-size: 26px;
+    color: #aaa;
+}
 </style>
 </head>
 
 <body>
 
 <div id="screen">
-    <div id="prompt">PRESS □</div>
-    <div id="info"></div>
-</div>
-
-<div id="game">
-    <!-- Actual game will eventually go here -->
+    <div id="status">TESTING AUTOMATIC FULLSCREEN...</div>
+    <div id="details"></div>
 </div>
 
 <script>
-let started = false;
+var status = document.getElementById("status");
+var details = document.getElementById("details");
 
-function checkFullscreen() {
-    const width = window.innerWidth;
-    const height = window.innerHeight;
+function updateInfo() {
+    details.innerHTML =
+        "Viewport: " +
+        window.innerWidth + " × " +
+        window.innerHeight +
+        "<br><br>" +
+        "Fullscreen API: " +
+        (document.documentElement.requestFullscreen ||
+         document.documentElement.webkitRequestFullscreen
+            ? "AVAILABLE"
+            : "NOT AVAILABLE");
+}
 
-    document.getElementById("info").textContent =
-        width + " × " + height;
+function tryFullscreen() {
+    var element = document.documentElement;
 
-    /*
-     * Sony documents PS4 browser fullscreen as
-     * 1920 × 1080, compared with 1540 × 754 normally.
-     */
-    if (!started && width >= 1700 && height >= 900) {
-        started = true;
+    try {
+        if (element.requestFullscreen) {
+            var result = element.requestFullscreen();
 
-        document.getElementById("screen").style.display = "none";
-        document.getElementById("game").style.display = "block";
+            if (result && result.catch) {
+                result.catch(function(error) {
+                    status.innerHTML = "AUTOMATIC FULLSCREEN FAILED";
+                    details.innerHTML +=
+                        "<br><br>Error: " + error;
+                });
+            }
 
-        startGame();
+        } else if (element.webkitRequestFullscreen) {
+            element.webkitRequestFullscreen();
+
+        } else {
+            status.innerHTML = "FULLSCREEN API NOT AVAILABLE";
+        }
+
+    } catch (error) {
+        status.innerHTML = "AUTOMATIC FULLSCREEN FAILED";
+        details.innerHTML +=
+            "<br><br>Error: " + error;
     }
 }
 
-function startGame() {
-    document.getElementById("game").innerHTML =
-        '<div style="' +
-        'width:100%;height:100%;' +
-        'display:flex;align-items:center;justify-content:center;' +
-        'font-size:80px;font-weight:bold;' +
-        '">GAME STARTED</div>';
+function checkFullscreen() {
+    updateInfo();
+
+    var width = window.innerWidth;
+    var height = window.innerHeight;
+
+    if (width >= 1700 && height >= 900) {
+        status.innerHTML = "🎉 FULLSCREEN WORKS!";
+    }
 }
 
 window.addEventListener("resize", checkFullscreen);
 
-checkFullscreen();
+updateInfo();
+
+/*
+ * Attempt immediately.
+ */
+tryFullscreen();
+
+/*
+ * Try again after a short delay in case the
+ * browser isn't ready immediately.
+ */
+setTimeout(tryFullscreen, 1000);
+
 </script>
 
 </body>
