@@ -15,8 +15,7 @@
   try { bestScore = Number(window.localStorage.getItem("poopoo-best") || 0) || 0; } catch (ignore) {}
 
   var playButton = { x: 760, y: 590, w: 400, h: 130 };
-  var backgroundMusic = document.createElement("audio");
-  backgroundMusic.src = "assets/music.mp3";
+  var backgroundMusic = document.getElementById("background-music");
   backgroundMusic.loop = true;
   backgroundMusic.preload = "none";
   backgroundMusic.volume = 0.4;
