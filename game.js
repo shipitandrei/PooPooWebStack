@@ -31,6 +31,8 @@
     } catch (ignore) {}
   }
 
+  var cursorHidden = false;
+
   var game = {
     mode: fitsTargetViewport() ? "menu" : "gate",
     resumeModeAfterGate: "menu",
@@ -42,6 +44,18 @@
     spawnIn: 0.4,
     flash: 0
   };
+
+  function syncCursor() {
+    var shouldHide = game.mode === "play";
+    if (shouldHide === cursorHidden) return;
+    cursorHidden = shouldHide;
+    if (canvas.classList) {
+      if (shouldHide) canvas.classList.add("cursor-hidden");
+      else canvas.classList.remove("cursor-hidden");
+    } else {
+      canvas.style.cursor = shouldHide ? "none" : "default";
+    }
+  }
 
   function loadSprite(path) {
     var image = new Image();
@@ -336,6 +350,7 @@
   }
 
   function draw() {
+    syncCursor();
     if (game.mode === "gate") { drawGate(); return; }
     ctx.clearRect(0, 0, W, H);
     if (game.mode === "menu") { drawMenu(); return; }
